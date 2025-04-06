@@ -1,0 +1,116 @@
+/* Table container with sticky horizontal scrollbar */
+.sticky-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+  position: relative;
+  max-height: calc(100vh - 300px);
+  min-height: 400px;
+}
+
+/* Make the horizontal scrollbar always visible and fixed at the bottom */
+.sticky-table-container {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+/* For Chrome, Edge, and Safari */
+.sticky-table-container::-webkit-scrollbar {
+  height: 10px;
+}
+
+.sticky-table-container::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.sticky-table-container::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 6px;
+  border: 2px solid #f7fafc;
+}
+
+.sticky-table-container::-webkit-scrollbar-thumb:hover {
+  background-color: #a0aec0;
+}
+
+/* Sticky first column */
+.sticky-left {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+
+/* Ensure proper background colors for sticky elements */
+thead .sticky-left {
+  background-color: #f9fafb; /* Match the header background */
+}
+
+tbody .sticky-left {
+  background-color: #ffffff; /* Match the cell background */
+}
+
+tbody tr:hover .sticky-left {
+  background-color: #f9fafb; /* Match the hover state */
+}
+
+/* Fixed header styles */
+.sticky-header th {
+  position: sticky;
+  top: 0;
+  background-color: #f9fafb;
+  z-index: 20;
+}
+
+/* The corner cell (intersection of sticky header and sticky column) needs highest z-index */
+.sticky-header th.sticky-left {
+  z-index: 30;
+}
+
+/* Action icons styling */
+.action-icon {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon:hover {
+  background-color: #f3f4f6;
+}
+
+.action-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Tooltip styling */
+.action-icon-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  background-color: #1f2937;
+  color: white;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+  margin-bottom: 0.25rem;
+}
+
+.action-icon:hover .action-icon-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Actions container */
+.actions-container {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+} 
