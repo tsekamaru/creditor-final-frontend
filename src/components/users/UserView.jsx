@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUserById } from '../services/user.service';
+import { getUserById } from '../../services/user.service';
 import { toast } from 'react-toastify';
 
 const UserView = ({ userId, onClose }) => {

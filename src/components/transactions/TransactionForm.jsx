@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { createTransaction } from '../services/transaction.service';
+import { createTransaction } from '../../services/transaction.service';
 
 const TransactionForm = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUserById, updateUser, deleteUser } from '../services/user.service';
+import { getUserById, updateUser, deleteUser } from '../../services/user.service';
 import { toast } from 'react-toastify';
 
 const UserEdit = ({ userId, onClose, onSuccess }) => {

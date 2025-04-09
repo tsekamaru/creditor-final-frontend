@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
-import { getCustomerById, updateCustomer, deleteCustomer } from '../services/customer.service';
+import { getEmployeeById, updateEmployee, deleteEmployee } from '../../services/employee.service';
 import { toast } from 'react-toastify';
 
-const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
+const EmployeeEdit = ({ employeeId, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    social_security_number: '',
-    date_of_birth: '',
-    address: '',
-    phone_number: '',
-    email: ''
+    position: '',
+    date_of_birth: ''
   });
-  const [originalCustomer, setOriginalCustomer] = useState(null);
+  const [originalEmployee, setOriginalEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -30,31 +27,28 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
       try {
         setFetchingData(true);
         
-        // Fetch customer details
-        const customerData = await getCustomerById(customerId);
-        const customer = customerData.customer || customerData;
-        setOriginalCustomer(customer);
+        // Fetch employee details
+        const employeeData = await getEmployeeById(employeeId);
+        const employee = employeeData.employee || employeeData;
+        setOriginalEmployee(employee);
         
-        // Set form data with customer details
+        // Set form data with employee details
         setFormData({
-          first_name: customer.first_name || '',
-          last_name: customer.last_name || '',
-          social_security_number: customer.social_security_number || '',
-          date_of_birth: formatDateForInput(customer.date_of_birth),
-          address: customer.address || '',
-          phone_number: customer.phone_number || '',
-          email: customer.email || ''
+          first_name: employee.first_name || '',
+          last_name: employee.last_name || '',
+          position: employee.position || '',
+          date_of_birth: formatDateForInput(employee.date_of_birth)
         });
       } catch (error) {
-        console.error('Error fetching customer data:', error);
-        toast.error('Failed to load customer data');
+        console.error('Error fetching employee data:', error);
+        toast.error('Failed to load employee data');
       } finally {
         setFetchingData(false);
       }
     };
     
     fetchData();
-  }, [customerId]);
+  }, [employeeId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,15 +62,15 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.first_name || !formData.last_name || !formData.social_security_number) {
+    if (!formData.first_name || !formData.last_name || !formData.position) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       setLoading(true);
-      const result = await updateCustomer(customerId, formData);
-      toast.success('Customer updated successfully');
+      const result = await updateEmployee(employeeId, formData);
+      toast.success('Employee updated successfully');
       
       if (onSuccess) {
         onSuccess(result);
@@ -87,8 +81,8 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
         onClose();
       }
     } catch (error) {
-      console.error('Error updating customer:', error);
-      toast.error(error.response?.data?.message || 'Failed to update customer');
+      console.error('Error updating employee:', error);
+      toast.error(error.response?.data?.message || 'Failed to update employee');
     } finally {
       setLoading(false);
     }
@@ -97,8 +91,8 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
   const handleDelete = async () => {
     try {
       setDeleteLoading(true);
-      await deleteCustomer(customerId);
-      toast.success('Customer deleted successfully');
+      await deleteEmployee(employeeId);
+      toast.success('Employee deleted successfully');
       
       if (onSuccess) {
         onSuccess();
@@ -109,11 +103,25 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
         onClose();
       }
     } catch (error) {
-      console.error('Error deleting customer:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete customer');
+      console.error('Error deleting employee:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete employee');
       setShowDeleteConfirm(false);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  // Get styled badge for position
+  const getPositionBadge = (position) => {
+    switch (position?.toLowerCase()) {
+      case 'teller':
+        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{position}</span>;
+      case 'manager':
+        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">{position}</span>;
+      case 'director':
+        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">{position}</span>;
+      default:
+        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{position || 'Unknown'}</span>;
     }
   };
 
@@ -138,7 +146,7 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-primary-800">Edit Customer #{customerId}</h2>
+          <h2 className="text-xl font-bold text-primary-800">Edit Employee #{employeeId}</h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -182,20 +190,36 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
             </div>
           </div>
           
-          {/* Social Security Number */}
+          {/* Position */}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="social_security_number">
-              Social Security Number *
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="position">
+              Position *
             </label>
-            <input
-              id="social_security_number"
-              name="social_security_number"
-              type="text"
-              value={formData.social_security_number}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
+            <div className="relative">
+              <select
+                id="position"
+                name="position"
+                value={formData.position}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                required
+              >
+                <option value="">Select a position</option>
+                <option value="teller">Teller</option>
+                <option value="manager">Manager</option>
+                <option value="director">Director</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {formData.position && (
+              <div className="mt-2">
+                Current Position: {getPositionBadge(formData.position)}
+              </div>
+            )}
           </div>
           
           {/* Date of Birth */}
@@ -214,22 +238,6 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
             />
           </div>
           
-          {/* Address */}
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">
-              Address *
-            </label>
-            <textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-              rows="2"
-              required
-            ></textarea>
-          </div>
-          
           {/* Contact Information - Read Only */}
           <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Contact Information (Read Only)</h3>
@@ -240,7 +248,7 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
                 </label>
                 <input
                   type="text"
-                  value={originalCustomer?.phone_number || 'Not provided'}
+                  value={originalEmployee?.phone_number || 'Not provided'}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-500 leading-tight bg-gray-100 cursor-not-allowed"
                   disabled
                 />
@@ -251,7 +259,7 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
                 </label>
                 <input
                   type="text"
-                  value={originalCustomer?.email || 'Not provided'}
+                  value={originalEmployee?.email || 'Not provided'}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-500 leading-tight bg-gray-100 cursor-not-allowed"
                   disabled
                 />
@@ -265,29 +273,22 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
             </div>
           </div>
           
-          {/* Current Customer Status Info */}
-          {originalCustomer && (
+          {/* System Information */}
+          {originalEmployee && (
             <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Current Customer Status</h3>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">System Information</h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="font-medium">Status: </span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium 
-                    ${originalCustomer.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {originalCustomer.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium">ID: </span>
-                  <span>#{originalCustomer.user_id}</span>
+                  <span className="font-medium">Employee ID: </span>
+                  <span>#{originalEmployee.user_id}</span>
                 </div>
                 <div>
                   <span className="font-medium">Created: </span>
-                  <span>{originalCustomer.created_at ? new Date(originalCustomer.created_at).toLocaleDateString() : 'N/A'}</span>
+                  <span>{originalEmployee.created_at ? new Date(originalEmployee.created_at).toLocaleDateString() : 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="font-medium">Age: </span>
-                  <span>{originalCustomer.age} years</span>
+                  <span className="font-medium">Last Updated: </span>
+                  <span>{originalEmployee.updated_at ? new Date(originalEmployee.updated_at).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -295,7 +296,7 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
           
           {/* Action Buttons */}
           <div className="flex items-center justify-between">
-            <button
+            <button 
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
               className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded transition-colors flex items-center"
@@ -333,14 +334,14 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
             </div>
           </div>
         </form>
-
+        
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Delete</h3>
               <p className="text-gray-700 mb-6">
-                Are you sure you want to delete customer <span className="font-medium">{formData.first_name} {formData.last_name}</span>? This action cannot be undone.
+                Are you sure you want to delete employee <span className="font-medium">{formData.first_name} {formData.last_name}</span>? This action cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
                 <button
@@ -376,4 +377,4 @@ const CustomerEdit = ({ customerId, onClose, onSuccess }) => {
   );
 };
 
-export default CustomerEdit; 
+export default EmployeeEdit; 

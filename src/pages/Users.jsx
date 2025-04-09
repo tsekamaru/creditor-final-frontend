@@ -5,9 +5,9 @@ import { toast } from 'react-toastify'
 import { Navigate } from 'react-router-dom'
 import { getAllUsers } from '../services/user.service'
 import '../styles/table.css'
-import UserView from '../components/UserView'
-import UserEdit from '../components/UserEdit'
-import UserForm from '../components/UserForm'
+import UserView from '../components/users/UserView'
+import UserEdit from '../components/users/UserEdit'
+import UserForm from '../components/users/UserForm'
 
 const Users = () => {
   const { currentUser } = useAuth()

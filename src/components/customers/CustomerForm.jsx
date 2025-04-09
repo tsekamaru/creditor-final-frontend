@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { createEmployee } from '../services/employee.service';
 import { toast } from 'react-toastify';
+import { createCustomer } from '../../services/customer.service';
 
-const EmployeeForm = ({ onClose, onSuccess }) => {
+const CustomerForm = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    position: '',
+    social_security_number: '',
     date_of_birth: '',
-    email: '',
+    address: '',
+    country_code: '+31',
     phone_number: '',
+    email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -25,17 +27,39 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
-    if (!formData.first_name || !formData.last_name || !formData.position || 
-        !formData.email || !formData.password) {
+    // Basic validation
+    if (!formData.first_name || !formData.last_name || !formData.social_security_number || 
+        !formData.date_of_birth || !formData.address) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Password validation
+    if (!formData.password || formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Phone validation
+    if (!formData.country_code || !formData.phone_number) {
+      toast.error('Please enter a complete phone number with country code');
       return;
     }
 
     try {
       setLoading(true);
-      const result = await createEmployee(formData);
-      toast.success('Employee created successfully');
+      // Combine country code and phone number
+      const fullPhoneNumber = `${formData.country_code}${formData.phone_number.startsWith(' ') ? '' : ' '}${formData.phone_number}`;
+      
+      const customerData = {
+        ...formData,
+        phone_number: fullPhoneNumber
+      };
+      
+      delete customerData.country_code; // Remove separate country_code field
+      
+      const result = await createCustomer(customerData);
+      toast.success('Customer created successfully');
       
       if (onSuccess) {
         onSuccess(result);
@@ -46,32 +70,18 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
         onClose();
       }
     } catch (error) {
-      console.error('Error creating employee:', error);
-      toast.error(error.response?.data?.message || 'Failed to create employee');
+      console.error('Error creating customer:', error);
+      toast.error(error.response?.data?.message || 'Failed to create customer');
     } finally {
       setLoading(false);
     }
   };
 
-  // Get styled badge for position
-  const getPositionBadge = (position) => {
-    switch (position?.toLowerCase()) {
-      case 'teller':
-        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{position}</span>;
-      case 'manager':
-        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">{position}</span>;
-      case 'director':
-        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">{position}</span>;
-      default:
-        return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{position || 'Unknown'}</span>;
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-primary-800">Add New Employee</h2>
+          <h2 className="text-xl font-bold text-primary-800">Add New Customer</h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -115,36 +125,21 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
             </div>
           </div>
           
-          {/* Position */}
+          {/* Social Security Number */}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="position">
-              Position *
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="social_security_number">
+              Social Security Number *
             </label>
-            <div className="relative">
-              <select
-                id="position"
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                required
-              >
-                <option value="">Select a position</option>
-                <option value="teller">Teller</option>
-                <option value="manager">Manager</option>
-                <option value="director">Director</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-            {formData.position && (
-              <div className="mt-2">
-                Selected Position: {getPositionBadge(formData.position)}
-              </div>
-            )}
+            <input
+              id="social_security_number"
+              name="social_security_number"
+              type="text"
+              value={formData.social_security_number}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="e.g., 123-45-6789"
+              required
+            />
           </div>
           
           {/* Date of Birth */}
@@ -163,55 +158,92 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
             />
           </div>
           
-          {/* Contact Information */}
-          <div className="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Account Information</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-                  Email Address *
-                </label>
+          {/* Address */}
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">
+              Address *
+            </label>
+            <textarea
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              rows="2"
+              required
+            ></textarea>
+          </div>
+          
+          {/* Phone Number - Split into country code and number */}
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Phone Number *
+            </label>
+            <div className="flex gap-2">
+              <div className="w-1/4">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
+                  name="country_code"
+                  type="text"
+                  value={formData.country_code}
                   onChange={handleChange}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="+1"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone_number">
-                  Phone Number
-                </label>
+              <div className="w-3/4">
                 <input
                   id="phone_number"
                   name="phone_number"
-                  type="tel"
+                  type="text"
                   value={formData.phone_number}
                   onChange={handleChange}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                  Initial Password *
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="234-567-8900"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1 italic">
-                  Employee will be prompted to change this password upon first login.
-                </p>
               </div>
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Enter country code (e.g. +1) and phone number separately
+            </p>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+              Email *
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="customer@example.com"
+              required
+            />
+          </div>
+          
+          {/* Account Information */}
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+              Password *
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="At least 6 characters"
+              required
+              minLength="6"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Password must be at least 6 characters long.
+            </p>
           </div>
           
           {/* Action Buttons */}
@@ -237,7 +269,7 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
                   Creating...
                 </>
               ) : (
-                'Create Employee'
+                'Create Customer'
               )}
             </button>
           </div>
@@ -247,4 +279,4 @@ const EmployeeForm = ({ onClose, onSuccess }) => {
   );
 };
 
-export default EmployeeForm; 
+export default CustomerForm; 

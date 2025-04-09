@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTransactionById } from '../services/transaction.service';
+import { getTransactionById } from '../../services/transaction.service';
 import { toast } from 'react-toastify';
 
 const formatCurrency = (amount) => {

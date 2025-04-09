@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTransactionById, updateTransaction, deleteTransaction } from '../services/transaction.service';
+import { getTransactionById, updateTransaction, deleteTransaction } from '../../services/transaction.service';
 import { toast } from 'react-toastify';
 
 const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {

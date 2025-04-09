@@ -1,5 +1,5 @@
-import { useAuth } from '../hooks/useAuth';
-import { roles } from '../constants/roles';
+import { useAuth } from '../../hooks/useAuth';
+import { roles } from '../../constants/roles';
 
 const Footer = () => {
   const { currentUser } = useAuth();

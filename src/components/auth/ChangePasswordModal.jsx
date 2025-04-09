@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { changePassword } from '../services/user.service';
+import { changePassword } from '../../services/user.service';
 
 const ChangePasswordModal = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({

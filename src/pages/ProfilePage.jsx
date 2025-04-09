@@ -4,7 +4,7 @@ import { getCurrentUser, updateProfile } from '../services/user.service';
 import { getCustomerById, updateCustomer } from '../services/customer.service';
 import { getEmployeeById, updateEmployee } from '../services/employee.service';
 import { useAuth } from '../hooks/useAuth';
-import ChangePasswordModal from '../components/ChangePasswordModal';
+import ChangePasswordModal from '../components/auth/ChangePasswordModal';
 import { roles } from '../constants/roles';
 
 const ProfilePage = () => {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getAllEmployees } from '../services/employee.service';
-import EmployeeView from '../components/EmployeeView';
-import EmployeeEdit from '../components/EmployeeEdit';
-import EmployeeForm from '../components/EmployeeForm';
+import EmployeeView from '../components/employees/EmployeeView';
+import EmployeeEdit from '../components/employees/EmployeeEdit';
+import EmployeeForm from '../components/employees/EmployeeForm';
 import { toast } from 'react-toastify';
 import '../styles/table.css';
 

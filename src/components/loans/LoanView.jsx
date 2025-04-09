@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getLoanById } from '../services/loan.service';
-import { getCustomerById } from '../services/customer.service';
-import { getEmployeeById } from '../services/employee.service';
+import { getLoanById } from '../../services/loan.service';
+import { getCustomerById } from '../../services/customer.service';
+import { getEmployeeById } from '../../services/employee.service';
 import { toast } from 'react-toastify';
 
 const formatCurrency = (amount) => {

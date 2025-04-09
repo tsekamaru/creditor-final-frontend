@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCustomerById, getCustomerLoans } from '../services/customer.service';
+import { getCustomerById, getCustomerLoans } from '../../services/customer.service';
 import { toast } from 'react-toastify';
 
 const CustomerView = ({ customerId, onClose }) => {

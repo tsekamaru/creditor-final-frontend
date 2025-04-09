@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { createLoan } from '../services/loan.service';
-import { getCustomerById } from '../services/customer.service';
-import { useAuth } from '../hooks/useAuth';
+import { createLoan } from '../../services/loan.service';
+import { getCustomerById } from '../../services/customer.service';
+import { useAuth } from '../../hooks/useAuth';
 
 const LoanForm = ({ onClose, onSuccess, isCustomerApplication = false }) => {
   const { currentUser } = useAuth();

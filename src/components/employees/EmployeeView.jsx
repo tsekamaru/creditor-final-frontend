@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getEmployeeById } from '../services/employee.service';
+import { getEmployeeById } from '../../services/employee.service';
 import { toast } from 'react-toastify';
 
 const EmployeeView = ({ employeeId, onClose }) => {

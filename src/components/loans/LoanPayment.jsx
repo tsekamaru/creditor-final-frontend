@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getLoanById, makePayment } from '../services/loan.service';
+import { getLoanById, makePayment } from '../../services/loan.service';
 import { toast } from 'react-toastify';
 
 const LoanPayment = ({ loanId, onClose, onSuccess }) => {

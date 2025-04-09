@@ -4,9 +4,9 @@ import { roles } from '../constants/roles'
 import { toast } from 'react-toastify'
 import '../styles/table.css'
 import { getAllTransactions, getCustomerTransactions } from '../services/transaction.service'
-import TransactionForm from '../components/TransactionForm'
-import TransactionView from '../components/TransactionView'
-import TransactionEdit from '../components/TransactionEdit'
+import TransactionForm from '../components/transactions/TransactionForm'
+import TransactionView from '../components/transactions/TransactionView'
+import TransactionEdit from '../components/transactions/TransactionEdit'
 
 // Function to format currency with Mongolian tugrik symbol and thousand separators
 const formatCurrency = (amount) => {

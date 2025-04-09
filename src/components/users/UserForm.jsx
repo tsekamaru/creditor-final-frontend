@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { createUser } from '../services/user.service';
+import { createUser } from '../../services/user.service';
 
 const UserForm = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import reactLogo from '../assets/react.svg'
-import { useAuth } from '../hooks/useAuth'
-import { roles } from '../constants/roles'
-import ChangePasswordModal from './ChangePasswordModal'
+import reactLogo from '../../assets/react.svg'
+import { useAuth } from '../../hooks/useAuth'
+import { roles } from '../../constants/roles'
+import ChangePasswordModal from '../auth/ChangePasswordModal'
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)

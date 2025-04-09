@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getLoanById, updateLoan, deleteLoan } from '../services/loan.service';
-import { getCustomerById } from '../services/customer.service';
+import { getLoanById, updateLoan, deleteLoan } from '../../services/loan.service';
+import { getCustomerById } from '../../services/customer.service';
 import { toast } from 'react-toastify';
 
 const LoanEdit = ({ loanId, onClose, onSuccess }) => {

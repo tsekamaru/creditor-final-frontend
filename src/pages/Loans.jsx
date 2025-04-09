@@ -5,10 +5,10 @@ import { getAllLoans } from '../services/loan.service'
 import { getCustomerLoans } from '../services/customer.service'
 import { toast } from 'react-toastify'
 import '../styles/table.css'
-import LoanForm from '../components/LoanForm'
-import LoanView from '../components/LoanView'
-import LoanEdit from '../components/LoanEdit'
-import LoanPayment from '../components/LoanPayment'
+import LoanForm from '../components/loans/LoanForm'
+import LoanView from '../components/loans/LoanView'
+import LoanEdit from '../components/loans/LoanEdit'
+import LoanPayment from '../components/loans/LoanPayment'
 
 // Function to format currency with Mongolian tugrik symbol and thousand separators
 const formatCurrency = (amount) => {
