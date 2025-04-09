@@ -255,23 +255,13 @@ const Transactions = () => {
           
           {/* Action buttons */}
           <div className="flex flex-shrink-0">
-            {/* Admin and Employee can create transactions */}
+            {/* Only Admin and Employee can create transactions */}
             {currentUser?.role !== roles.customer && (
               <button 
                 onClick={() => setShowTransactionForm(true)}
                 className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded transition-colors flex-shrink-0"
               >
                 Record Transaction
-              </button>
-            )}
-            
-            {/* Customer can make a payment */}
-            {currentUser?.role === roles.customer && (
-              <button 
-                onClick={() => setShowTransactionForm(true)}
-                className="bg-accent-warm hover:bg-accent-warm/90 text-white font-medium py-2 px-4 rounded transition-colors flex-shrink-0"
-              >
-                Make Payment
               </button>
             )}
           </div>

@@ -6,34 +6,17 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     transaction_amount: '',
     transaction_purpose: '',
-    transaction_direction: ''
+    transaction_direction: '',
+    loan_id: '',
+    customer_id: '',
+    employee_id: '',
+    principle_amount: 0
   });
   const [originalTransaction, setOriginalTransaction] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  // Format currency for display
-  const formatCurrency = (amount) => {
-    if (amount === undefined || amount === null) return '';
-    
-    // Convert to number if it's a string
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    
-    // Format with thousand separators
-    return numAmount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
-  // Parse currency input
-  const parseCurrency = (value) => {
-    if (!value) return '';
-    // Remove all non-numeric characters except decimal point
-    return parseFloat(value.replace(/[^\d.]/g, ''));
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,9 +30,13 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
         
         // Set form data with transaction details
         setFormData({
-          transaction_amount: transaction.transaction_amount,
-          transaction_purpose: transaction.transaction_purpose,
-          transaction_direction: transaction.transaction_direction || 'in'
+          transaction_amount: transaction.transaction_amount || '',
+          transaction_purpose: transaction.transaction_purpose || '',
+          transaction_direction: transaction.transaction_direction || 'in',
+          loan_id: transaction.loan_id || '',
+          customer_id: transaction.customer_id || '',
+          employee_id: transaction.employee_id || '',
+          principle_amount: transaction.principle_amount || 0
         });
       } catch (error) {
         console.error('Error fetching transaction data:', error);
@@ -65,10 +52,24 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'transaction_amount') {
+    if (name === 'transaction_amount' || name === 'principle_amount') {
+      // Simplified validation - just allow numbers and decimal points
+      const numericValue = value.replace(/[^\d.]/g, '');
+      // Prevent multiple decimal points
+      const parts = numericValue.split('.');
+      const cleanValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+      
       setFormData({
         ...formData,
-        [name]: parseCurrency(value)
+        [name]: cleanValue
+      });
+    } else if (name === 'loan_id' || name === 'customer_id' || name === 'employee_id') {
+      // Only allow numeric values for IDs
+      const numericValue = value.replace(/\D/g, '');
+      
+      setFormData({
+        ...formData,
+        [name]: numericValue
       });
     } else if (name === 'transaction_purpose') {
       // Automatically set direction based on purpose
@@ -99,9 +100,27 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
       return;
     }
 
+    // Validate amount is a valid number
+    const amount = parseFloat(formData.transaction_amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid transaction amount');
+      return;
+    }
+
     try {
       setLoading(true);
-      const result = await updateTransaction(transactionId, formData);
+      // Include all required fields for the backend, converting strings to numbers
+      const transactionData = {
+        transaction_amount: parseFloat(formData.transaction_amount),
+        transaction_purpose: formData.transaction_purpose,
+        transaction_direction: formData.transaction_direction,
+        loan_id: parseInt(formData.loan_id, 10) || null,
+        customer_id: parseInt(formData.customer_id, 10) || null,
+        employee_id: parseInt(formData.employee_id, 10) || null,
+        principle_amount: parseFloat(formData.principle_amount) || 0
+      };
+      
+      const result = await updateTransaction(transactionId, transactionData);
       toast.success('Transaction updated successfully');
       
       if (onSuccess) {
@@ -265,9 +284,13 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
                   value="in"
                   checked={formData.transaction_direction === 'in'}
                   disabled
-                  className="form-radio text-primary-600 cursor-not-allowed opacity-60"
+                  className={`form-radio ${formData.transaction_direction === 'in' 
+                    ? 'text-primary-600 border-2 border-primary-600 bg-primary-100' 
+                    : 'text-gray-400'} cursor-not-allowed`}
                 />
-                <span className="ml-2">In (Received)</span>
+                <span className={`ml-2 ${formData.transaction_direction === 'in' ? 'text-primary-700 font-semibold' : 'text-gray-500'}`}>
+                  In (Received)
+                </span>
               </label>
               <label className="inline-flex items-center">
                 <input
@@ -276,9 +299,13 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
                   value="out"
                   checked={formData.transaction_direction === 'out'}
                   disabled
-                  className="form-radio text-accent-warm cursor-not-allowed opacity-60"
+                  className={`form-radio ${formData.transaction_direction === 'out'
+                    ? 'text-accent-warm border-2 border-accent-warm bg-accent-warm/20'
+                    : 'text-gray-400'} cursor-not-allowed`}
                 />
-                <span className="ml-2">Out (Paid)</span>
+                <span className={`ml-2 ${formData.transaction_direction === 'out' ? 'text-accent-warm font-semibold' : 'text-gray-500'}`}>
+                  Out (Paid)
+                </span>
               </label>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -297,7 +324,7 @@ const TransactionEdit = ({ transactionId, onClose, onSuccess }) => {
                 id="transaction_amount"
                 name="transaction_amount"
                 type="text"
-                value={formatCurrency(formData.transaction_amount)}
+                value={formData.transaction_amount}
                 onChange={handleChange}
                 className="shadow appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="0.00"

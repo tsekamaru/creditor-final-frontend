@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getLoanById, updateLoan, deleteLoan } from '../services/loan.service';
-import { getAllUsers } from '../services/user.service';
+import { getCustomerById } from '../services/customer.service';
 import { toast } from 'react-toastify';
 
 const LoanEdit = ({ loanId, onClose, onSuccess }) => {
@@ -11,9 +11,10 @@ const LoanEdit = ({ loanId, onClose, onSuccess }) => {
     loan_amount: ''
   });
   const [originalLoan, setOriginalLoan] = useState(null);
-  const [customers, setCustomers] = useState([]);
+  const [customerDetails, setCustomerDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
+  const [fetchingCustomer, setFetchingCustomer] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -52,21 +53,31 @@ const LoanEdit = ({ loanId, onClose, onSuccess }) => {
         
         // Fetch loan details
         const loanData = await getLoanById(loanId);
-        setOriginalLoan(loanData);
+        setOriginalLoan(loanData.loan);
         
         // Set form data with loan details
         setFormData({
-          customer_id: loanData.customer_id,
-          start_date: formatDateForInput(loanData.start_date),
-          extension_date: formatDateForInput(loanData.extension_date),
-          loan_amount: loanData.loan_amount
+          customer_id: loanData.loan.customer_id,
+          start_date: formatDateForInput(loanData.loan.start_date),
+          extension_date: formatDateForInput(loanData.loan.extension_date),
+          loan_amount: loanData.loan.loan_amount
         });
         
-        // Fetch customers for dropdown
-        const response = await getAllUsers();
-        // Filter only customers
-        const customersList = response.filter(user => user.role === 'customer');
-        setCustomers(customersList);
+        // Fetch customer details if there's a customer ID
+        if (loanData.loan.customer_id) {
+          try {
+            setFetchingCustomer(true);
+            const customerData = await getCustomerById(loanData.loan.customer_id);
+            if (customerData && customerData.customer) {
+              setCustomerDetails(customerData.customer);
+            }
+          } catch (error) {
+            console.error('Error fetching customer details:', error);
+            setCustomerDetails(null);
+          } finally {
+            setFetchingCustomer(false);
+          }
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Failed to load loan data');
@@ -86,6 +97,33 @@ const LoanEdit = ({ loanId, onClose, onSuccess }) => {
         ...formData,
         [name]: parseCurrency(value)
       });
+    } else if (name === 'customer_id') {
+      // Update the customer ID in the form
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+      
+      // Fetch customer details if a valid ID is entered
+      if (value && !isNaN(value)) {
+        // Directly fetch customer data using the service
+        setFetchingCustomer(true);
+        getCustomerById(value)
+          .then(customerData => {
+            if (customerData && customerData.customer) {
+              setCustomerDetails(customerData.customer);
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching customer details:', error);
+            setCustomerDetails(null);
+          })
+          .finally(() => {
+            setFetchingCustomer(false);
+          });
+      } else {
+        setCustomerDetails(null);
+      }
     } else {
       setFormData({
         ...formData,
@@ -100,6 +138,12 @@ const LoanEdit = ({ loanId, onClose, onSuccess }) => {
     // Validation
     if (!formData.customer_id || !formData.loan_amount) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    // Validate that a customer exists with this ID
+    if (!customerDetails) {
+      toast.error('Please enter a valid customer ID');
       return;
     }
 
@@ -180,26 +224,73 @@ const LoanEdit = ({ loanId, onClose, onSuccess }) => {
         </div>
         
         <form onSubmit={handleSubmit}>
-          {/* Customer Selection */}
+          {/* Customer Selection - Enhanced */}
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="customer_id">
               Customer *
             </label>
-            <select
+            <input
               id="customer_id"
               name="customer_id"
+              type="text"
               value={formData.customer_id}
               onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Enter customer ID"
               required
-            >
-              <option value="">Select a customer</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name || customer.phone || `Customer #${customer.id}`}
-                </option>
-              ))}
-            </select>
+            />
+            
+            {/* Preview selected customer details if available */}
+            {formData.customer_id && (
+              <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                {fetchingCustomer ? (
+                  <div className="text-center py-2">
+                    <span className="text-sm text-gray-500">Loading customer details...</span>
+                  </div>
+                ) : customerDetails ? (
+                  <>
+                    <div className="font-medium text-gray-700">Customer Details:</div>
+                    <div className="grid grid-cols-2 gap-1 mt-1">
+                      {(customerDetails.first_name || customerDetails.last_name) && (
+                        <div>
+                          <span className="font-medium">Name:</span> 
+                          {`${customerDetails.first_name || ''} ${customerDetails.last_name || ''}`}
+                        </div>
+                      )}
+                      {customerDetails.phone_number && (
+                        <div>
+                          <span className="font-medium">Phone:</span> {customerDetails.phone_number}
+                        </div>
+                      )}
+                      {customerDetails.email && (
+                        <div>
+                          <span className="font-medium">Email:</span> {customerDetails.email}
+                        </div>
+                      )}
+                      {customerDetails.address && (
+                        <div className="col-span-2">
+                          <span className="font-medium">Address:</span> {customerDetails.address}
+                        </div>
+                      )}
+                      {customerDetails.is_active !== undefined && (
+                        <div>
+                          <span className="font-medium">Status:</span>
+                          <span className={`ml-1 px-1 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full
+                            ${customerDetails.is_active ? 'bg-green-100 text-green-800' : 
+                            'bg-gray-100 text-gray-800'}`}>
+                            {customerDetails.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-2">
+                    <span className="text-sm text-gray-500">No customer found with ID {formData.customer_id}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Loan Amount */}

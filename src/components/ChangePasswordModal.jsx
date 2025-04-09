@@ -41,13 +41,15 @@ const ChangePasswordModal = ({ onClose, onSuccess }) => {
 
     try {
       setLoading(true);
-      await changePassword({
+      
+      // Pass password data to the service
+      const result = await changePassword({
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
         confirmNewPassword: formData.confirmNewPassword
       });
       
-      toast.success('Password changed successfully');
+      toast.success(result.message || 'Password changed successfully');
       
       if (onSuccess) {
         onSuccess();

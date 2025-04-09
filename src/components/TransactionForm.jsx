@@ -1,80 +1,34 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { createTransaction } from '../services/transaction.service';
-import { getAllUsers } from '../services/user.service';
-import { getAllLoans } from '../services/loan.service';
 
 const TransactionForm = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     transaction_amount: '',
     transaction_purpose: 'loan_principle_payment',
     loan_id: '',
+    customer_id: '',
     transaction_direction: 'in'
   });
-  const [customers, setCustomers] = useState([]);
-  const [loans, setLoans] = useState([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [fetchingData, setFetchingData] = useState(true);
-
-  // Fetch customers and loans for the dropdowns
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setFetchingData(true);
-        
-        // Fetch customers
-        const usersResponse = await getAllUsers();
-        // Filter only customers
-        const customersList = usersResponse.filter(user => user.role === 'customer');
-        setCustomers(customersList);
-        
-        // Fetch all loans
-        const loansResponse = await getAllLoans();
-        setLoans(loansResponse.loans || []);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to load reference data');
-      } finally {
-        setFetchingData(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Filter loans by selected customer
-  const filteredLoans = selectedCustomerId 
-    ? loans.filter(loan => loan.customer_id.toString() === selectedCustomerId.toString())
-    : loans;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Special handling for numeric fields
+    // Special handling for transaction_amount - just validate it's a number or empty
     if (name === 'transaction_amount') {
-      const numValue = parseFloat(value.replace(/,/g, ''));
-      if (!isNaN(numValue)) {
-        setFormData({
-          ...formData,
-          [name]: numValue
-        });
-      } else if (value === '') {
-        setFormData({
-          ...formData,
-          [name]: ''
-        });
-      }
-    } 
-    // Special handling for customer selection
-    else if (name === 'customer_id') {
-      setSelectedCustomerId(value);
+      // Remove any non-numeric or decimal characters
+      const numericValue = value.replace(/[^\d.]/g, '');
+      // Prevent multiple decimal points
+      const parts = numericValue.split('.');
+      const cleanValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+      
       setFormData({
         ...formData,
-        loan_id: '' // Reset loan when customer changes
+        [name]: cleanValue
       });
-    }
-    // Default handling
+    } 
+    // Default handling for other fields
     else {
       setFormData({
         ...formData,
@@ -87,8 +41,15 @@ const TransactionForm = ({ onClose, onSuccess }) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.transaction_amount || !formData.loan_id || !formData.transaction_purpose) {
+    if (!formData.transaction_amount || !formData.loan_id || !formData.transaction_purpose || !formData.customer_id) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Validate amount is a number
+    const amount = parseFloat(formData.transaction_amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid transaction amount');
       return;
     }
 
@@ -97,7 +58,7 @@ const TransactionForm = ({ onClose, onSuccess }) => {
       // Prepare transaction data
       const transactionData = {
         ...formData,
-        transaction_amount: parseFloat(formData.transaction_amount)
+        transaction_amount: amount
       };
       
       const result = await createTransaction(transactionData);
@@ -163,22 +124,18 @@ const TransactionForm = ({ onClose, onSuccess }) => {
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="transaction_purpose">
               Transaction Purpose *
             </label>
-            {fetchingData ? (
-              <div className="animate-pulse h-10 bg-gray-200 rounded"></div>
-            ) : (
-              <select
-                id="transaction_purpose"
-                name="transaction_purpose"
-                value={formData.transaction_purpose}
-                onChange={handleChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                required
-              >
-                <option value="loan_principle_payment">Principle Payment</option>
-                <option value="loan_interest_payment">Interest Payment</option>
-                <option value="loan_disbursement">Loan Disbursement</option>
-              </select>
-            )}
+            <select
+              id="transaction_purpose"
+              name="transaction_purpose"
+              value={formData.transaction_purpose}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              required
+            >
+              <option value="loan_principle_payment">Principle Payment</option>
+              <option value="loan_interest_payment">Interest Payment</option>
+              <option value="loan_disbursement">Loan Disbursement</option>
+            </select>
           </div>
           
           {/* Transaction Direction */}
@@ -194,9 +151,13 @@ const TransactionForm = ({ onClose, onSuccess }) => {
                   value="in"
                   checked={formData.transaction_direction === 'in'}
                   disabled
-                  className="form-radio text-primary-600 cursor-not-allowed opacity-60"
+                  className={`form-radio ${formData.transaction_direction === 'in' 
+                    ? 'text-primary-600 border-2 border-primary-600 bg-primary-100' 
+                    : 'text-gray-400'} cursor-not-allowed`}
                 />
-                <span className="ml-2">In (Received)</span>
+                <span className={`ml-2 ${formData.transaction_direction === 'in' ? 'text-primary-700 font-semibold' : 'text-gray-500'}`}>
+                  In (Received)
+                </span>
               </label>
               <label className="inline-flex items-center">
                 <input
@@ -205,9 +166,13 @@ const TransactionForm = ({ onClose, onSuccess }) => {
                   value="out"
                   checked={formData.transaction_direction === 'out'}
                   disabled
-                  className="form-radio text-accent-warm cursor-not-allowed opacity-60"
+                  className={`form-radio ${formData.transaction_direction === 'out'
+                    ? 'text-accent-warm border-2 border-accent-warm bg-accent-warm/20'
+                    : 'text-gray-400'} cursor-not-allowed`}
                 />
-                <span className="ml-2">Out (Paid)</span>
+                <span className={`ml-2 ${formData.transaction_direction === 'out' ? 'text-accent-warm font-semibold' : 'text-gray-500'}`}>
+                  Out (Paid)
+                </span>
               </label>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -215,59 +180,44 @@ const TransactionForm = ({ onClose, onSuccess }) => {
             </p>
           </div>
           
-          {/* Customer Selection */}
+          {/* Customer ID Input */}
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="customer_id">
-              Customer *
+              Customer ID *
             </label>
-            {fetchingData ? (
-              <div className="animate-pulse h-10 bg-gray-200 rounded"></div>
-            ) : (
-              <select
-                id="customer_id"
-                name="customer_id"
-                value={selectedCustomerId}
-                onChange={handleChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                required
-              >
-                <option value="">Select a customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name || customer.phone_number || `Customer #${customer.id}`}
-                  </option>
-                ))}
-              </select>
-            )}
+            <input
+              type="text"
+              id="customer_id"
+              name="customer_id"
+              value={formData.customer_id || ''}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Enter customer ID"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter the customer ID associated with this transaction
+            </p>
           </div>
           
-          {/* Loan Selection */}
+          {/* Loan ID Input */}
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="loan_id">
-              Loan *
+              Loan ID *
             </label>
-            {fetchingData ? (
-              <div className="animate-pulse h-10 bg-gray-200 rounded"></div>
-            ) : (
-              <select
-                id="loan_id"
-                name="loan_id"
-                value={formData.loan_id}
-                onChange={handleChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                required
-                disabled={!selectedCustomerId}
-              >
-                <option value="">
-                  {selectedCustomerId ? 'Select a loan' : 'Select a customer first'}
-                </option>
-                {filteredLoans.map((loan) => (
-                  <option key={loan.id} value={loan.id}>
-                    Loan #{loan.id} - ₮{loan.loan_amount?.toLocaleString() || 0}
-                  </option>
-                ))}
-              </select>
-            )}
+            <input
+              type="text"
+              id="loan_id"
+              name="loan_id"
+              value={formData.loan_id}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Enter loan ID"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter the loan ID for this transaction
+            </p>
           </div>
           
           {/* Transaction Amount */}
@@ -281,7 +231,7 @@ const TransactionForm = ({ onClose, onSuccess }) => {
                 id="transaction_amount"
                 name="transaction_amount"
                 type="text"
-                value={formData.transaction_amount === '' ? '' : formData.transaction_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                value={formData.transaction_amount}
                 onChange={handleChange}
                 className="shadow appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="0.00"

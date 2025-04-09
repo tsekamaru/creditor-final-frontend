@@ -20,17 +20,6 @@ export const getLoanById = async (id) => {
 }
 
 /**
- * Get customer's loans
- * For customers, this will automatically return only their loans
- * @returns {Promise} - List of customer's loans
- */
-export const getCustomerLoans = async () => {
-  // Using the same endpoint as getAllLoans because the backend filters based on the user role
-  const response = await axios.get('/api/loans')
-  return response.data
-}
-
-/**
  * Create a new loan (Admin and Employee only)
  * @param {object} loanData - Loan data including customer_id and loan_amount
  * @returns {Promise} - New loan data

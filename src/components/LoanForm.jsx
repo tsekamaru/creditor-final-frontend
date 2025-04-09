@@ -1,54 +1,81 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { createLoan } from '../services/loan.service';
-import { getAllUsers } from '../services/user.service';
+import { getCustomerById } from '../services/customer.service';
+import { useAuth } from '../hooks/useAuth';
 
-const LoanForm = ({ onClose, onSuccess }) => {
+const LoanForm = ({ onClose, onSuccess, isCustomerApplication = false }) => {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     customer_id: '',
-    loan_amount: ''
+    loan_amount: '',
+    purpose: '',
+    loan_period: 30 // Default loan period in days
   });
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingCustomers, setFetchingCustomers] = useState(true);
+  const [fetchingCustomer, setFetchingCustomer] = useState(false);
+  const [customerDetails, setCustomerDetails] = useState(null);
 
-  // Fetch customers for the dropdown
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setFetchingCustomers(true);
-        const response = await getAllUsers();
-        // Filter only customers
-        const customersList = response.filter(user => user.role === 'customer');
-        setCustomers(customersList);
-      } catch (error) {
-        console.error('Error fetching customers:', error);
-        toast.error('Failed to load customers');
-      } finally {
-        setFetchingCustomers(false);
+  // Function to fetch customer details when an ID is entered
+  const fetchCustomerDetails = async (customerId) => {
+    if (!customerId) {
+      setCustomerDetails(null);
+      return;
+    }
+    
+    try {
+      setFetchingCustomer(true);
+      const customerData = await getCustomerById(customerId);
+      if (customerData) {
+        setCustomerDetails(customerData);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+      toast.error('Failed to find customer with that ID');
+      setCustomerDetails(null);
+    } finally {
+      setFetchingCustomer(false);
+    }
+  };
 
-    fetchCustomers();
-  }, []);
+  // For customer applications, pre-populate the customer_id
+  useEffect(() => {
+    if (isCustomerApplication && currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        customer_id: currentUser.id
+      }));
+      
+      // For customer applications, fetch the customer's own details
+      if (currentUser.id) {
+        fetchCustomerDetails(currentUser.id);
+      }
+    }
+  }, [isCustomerApplication, currentUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Convert loan_amount to number with 2 decimal places for display
     if (name === 'loan_amount') {
-      const numValue = parseFloat(value.replace(/,/g, ''));
-      if (!isNaN(numValue)) {
-        setFormData({
-          ...formData,
-          [name]: numValue
-        });
-      } else if (value === '') {
-        setFormData({
-          ...formData,
-          [name]: ''
-        });
-      }
+      // Only allow numbers and decimal point
+      const numericValue = value.replace(/[^\d.]/g, '');
+      
+      // Prevent multiple decimal points
+      const parts = numericValue.split('.');
+      const cleanValue = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('') : '');
+      
+      setFormData({
+        ...formData,
+        [name]: cleanValue
+      });
+    } else if (name === 'customer_id') {
+      // Only allow numeric values for customer ID
+      const numericValue = value.replace(/\D/g, '');
+      
+      setFormData({
+        ...formData,
+        [name]: numericValue
+      });
     } else {
       setFormData({
         ...formData,
@@ -60,15 +87,61 @@ const LoanForm = ({ onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.customer_id || !formData.loan_amount) {
-      toast.error('Please fill in all required fields');
+    // Validate loan amount
+    if (!formData.loan_amount || isNaN(parseFloat(formData.loan_amount)) || parseFloat(formData.loan_amount) <= 0) {
+      toast.error('Please enter a valid loan amount');
       return;
     }
+    
+    // Different validation for customer application vs admin creation
+    if (isCustomerApplication) {
+      // Purpose is required for customer applications
+      if (!formData.purpose) {
+        toast.error('Please specify the purpose of the loan');
+        return;
+      }
+    } else {
+      if (!formData.customer_id) {
+        toast.error('Please enter a customer ID');
+        return;
+      }
+      
+      // Fetch and validate customer ID at submission time
+      try {
+        setLoading(true);
+        const response = await getCustomerById(formData.customer_id);
+        if (!response || !response.success || !response.customer) {
+          toast.error('Invalid customer ID. Customer not found.');
+          setLoading(false);
+          return;
+        }
+        // Update customer details for the form
+        setCustomerDetails(response.customer);
+      } catch (error) {
+        console.error('Error validating customer:', error);
+        toast.error('Invalid customer ID. Please check and try again.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Format loan amount to ensure it's a number
+    const formattedData = {
+      ...formData,
+      loan_amount: parseFloat(parseFloat(formData.loan_amount).toFixed(2))
+    };
 
     try {
-      setLoading(true);
-      const result = await createLoan(formData);
-      toast.success('Loan created successfully');
+      // We're already loading from the customer validation step for admin
+      if (!loading) setLoading(true);
+      
+      const result = await createLoan(formattedData);
+      
+      if (isCustomerApplication) {
+        toast.success('Loan application submitted successfully');
+      } else {
+        toast.success('Loan created successfully');
+      }
       
       if (onSuccess) {
         onSuccess(result);
@@ -80,7 +153,7 @@ const LoanForm = ({ onClose, onSuccess }) => {
       }
     } catch (error) {
       console.error('Error creating loan:', error);
-      toast.error(error.response?.data?.message || 'Failed to create loan');
+      toast.error(error.response?.data?.message || 'Failed to process loan request');
     } finally {
       setLoading(false);
     }
@@ -90,7 +163,9 @@ const LoanForm = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-primary-800">Create New Loan</h2>
+          <h2 className="text-xl font-bold text-primary-800">
+            {isCustomerApplication ? 'Apply for a Loan' : 'Create New Loan'}
+          </h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -102,32 +177,30 @@ const LoanForm = ({ onClose, onSuccess }) => {
         </div>
         
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="customer_id">
-              Customer *
-            </label>
-            {fetchingCustomers ? (
-              <div className="animate-pulse h-10 bg-gray-200 rounded"></div>
-            ) : (
-              <select
+          {/* Customer Selection - Only shown for admin/employee */}
+          {!isCustomerApplication && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="customer_id">
+                Customer ID *
+              </label>
+              <input
                 id="customer_id"
                 name="customer_id"
+                type="text"
                 value={formData.customer_id}
                 onChange={handleChange}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Enter customer ID"
                 required
-              >
-                <option value="">Select a customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name || customer.phone || `Customer #${customer.id}`}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter customer ID. Customer details will be verified when you submit.
+              </p>
+            </div>
+          )}
           
-          <div className="mb-6">
+          {/* Loan Amount */}
+          <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="loan_amount">
               Loan Amount (₮) *
             </label>
@@ -137,7 +210,7 @@ const LoanForm = ({ onClose, onSuccess }) => {
                 id="loan_amount"
                 name="loan_amount"
                 type="text"
-                value={formData.loan_amount === '' ? '' : formData.loan_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                value={formData.loan_amount}
                 onChange={handleChange}
                 className="shadow appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 placeholder="0.00"
@@ -148,6 +221,47 @@ const LoanForm = ({ onClose, onSuccess }) => {
               Enter the principal amount of the loan. Interest will be calculated automatically based on the loan period.
             </p>
           </div>
+          
+          {/* Loan Period - only visible for customer applications */}
+          {isCustomerApplication && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="loan_period">
+                Loan Period (days)
+              </label>
+              <select
+                id="loan_period"
+                name="loan_period"
+                value={formData.loan_period}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="7">7 days</option>
+                <option value="14">14 days</option>
+                <option value="30">30 days</option>
+                <option value="60">60 days</option>
+                <option value="90">90 days</option>
+              </select>
+            </div>
+          )}
+          
+          {/* Loan Purpose - only visible for customer applications */}
+          {isCustomerApplication && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="purpose">
+                Loan Purpose *
+              </label>
+              <textarea
+                id="purpose"
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Briefly describe the purpose of this loan"
+                rows="3"
+                required
+              />
+            </div>
+          )}
           
           <div className="flex items-center justify-end">
             <button
@@ -160,7 +274,7 @@ const LoanForm = ({ onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={loading}
-              className={`bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded transition-colors flex items-center ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`${isCustomerApplication ? 'bg-accent-warm hover:bg-accent-warm/90' : 'bg-primary-600 hover:bg-primary-700'} text-white font-medium py-2 px-4 rounded transition-colors flex items-center ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <>
@@ -171,7 +285,7 @@ const LoanForm = ({ onClose, onSuccess }) => {
                   Processing...
                 </>
               ) : (
-                'Create Loan'
+                isCustomerApplication ? 'Submit Application' : 'Create Loan'
               )}
             </button>
           </div>

@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { roles } from '../constants/roles'
-import { getCustomerLoans, getAllLoans } from '../services/loan.service'
+import { getAllLoans } from '../services/loan.service'
+import { getCustomerLoans } from '../services/customer.service'
 import { toast } from 'react-toastify'
 import '../styles/table.css'
 import LoanForm from '../components/LoanForm'
 import LoanView from '../components/LoanView'
 import LoanEdit from '../components/LoanEdit'
+import LoanPayment from '../components/LoanPayment'
 
 // Function to format currency with Mongolian tugrik symbol and thousand separators
 const formatCurrency = (amount) => {
@@ -31,33 +33,33 @@ const Loans = () => {
   const [showLoanForm, setShowLoanForm] = useState(false)
   const [viewingLoan, setViewingLoan] = useState(null) // ID of loan being viewed
   const [editingLoan, setEditingLoan] = useState(null) // ID of loan being edited
+  const [payingLoan, setPayingLoan] = useState(null) // ID of loan being paid
 
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     try {
       setIsLoading(true)
       
       // Fetch loans based on user role
       let response
       if (currentUser?.role === roles.customer) {
-        response = await getCustomerLoans()
+        response = await getCustomerLoans(currentUser.id)
       } else {
         response = await getAllLoans()
       }
-      
-      // Transform the response data for consistency
-      const loansData = response.loans || response.data || []
-      setLoans(loansData)
+
+      setLoans(response.loans)
     } catch (error) {
       console.error('Error fetching loans:', error)
       toast.error('Failed to load loans data')
+      setLoans([]) // Set empty array on error for safety
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [currentUser?.role])
 
   useEffect(() => {
     fetchLoans()
-  }, [currentUser?.role])
+  }, [fetchLoans])
 
   // Handle loan creation success
   const handleLoanCreated = () => {
@@ -77,7 +79,12 @@ const Loans = () => {
   // Handle opening loan edit
   const handleEditLoan = (loanId) => {
     setEditingLoan(loanId);
-  }
+  };
+  
+  // Handle opening payment modal
+  const handlePaymentModal = (loanId) => {
+    setPayingLoan(loanId);
+  };
 
   // Filter and search loans
   const filteredLoans = loans.filter(loan => {
@@ -146,7 +153,9 @@ const Loans = () => {
       <div className="bg-white p-4 rounded-lg shadow-md mb-4">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 flex-wrap">
           {/* Title */}
-          <h1 className="text-2xl font-bold text-primary-800 whitespace-nowrap mr-4">Loans</h1>
+          <h1 className="text-2xl font-bold text-primary-800 whitespace-nowrap mr-4">
+            {currentUser?.role === roles.customer ? 'My Loans' : 'Loans'}
+          </h1>
           
           {/* Status filter buttons */}
           <div className="flex flex-wrap gap-2">
@@ -187,7 +196,9 @@ const Loans = () => {
               <input
                 type="text"
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="Search loans by ID, amount, status..."
+                placeholder={currentUser?.role === roles.customer 
+                  ? "Search your loans by amount, status..." 
+                  : "Search loans by ID, amount, customer..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -196,20 +207,13 @@ const Loans = () => {
           
           {/* Action buttons */}
           <div className="flex flex-shrink-0">
-            {/* Admin and Employee can create loans */}
+            {/* Only Admin and Employee can create loans */}
             {currentUser?.role !== roles.customer && (
               <button 
                 onClick={() => setShowLoanForm(true)}
                 className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded transition-colors flex-shrink-0"
               >
                 Create New Loan
-              </button>
-            )}
-            
-            {/* Customer can apply for loans */}
-            {currentUser?.role === roles.customer && (
-              <button className="bg-accent-warm hover:bg-accent-warm/90 text-white font-medium py-2 px-4 rounded transition-colors flex-shrink-0">
-                Apply for Loan
               </button>
             )}
           </div>
@@ -237,6 +241,15 @@ const Loans = () => {
         <LoanEdit 
           loanId={editingLoan}
           onClose={() => setEditingLoan(null)}
+          onSuccess={handleLoanUpdated}
+        />
+      )}
+      
+      {/* Loan payment modal */}
+      {payingLoan && (
+        <LoanPayment 
+          loanId={payingLoan}
+          onClose={() => setPayingLoan(null)}
           onSuccess={handleLoanUpdated}
         />
       )}
@@ -374,7 +387,10 @@ const Loans = () => {
                         
                         {/* Customer actions */}
                         {currentUser?.role === roles.customer && loan.current_status === 'active' && (
-                          <button className="action-icon text-accent-warm hover:text-accent-warm/80">
+                          <button 
+                            onClick={() => handlePaymentModal(loan.id)}
+                            className="action-icon text-accent-warm hover:text-accent-warm/80"
+                          >
                             <span className="action-icon-tooltip">Make Payment</span>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 01-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.323.152-.691.546-1.004zM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 01-.921.42z" />

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getCurrentUser, updateProfile } from '../services/user.service';
+import { getCustomerById, updateCustomer } from '../services/customer.service';
+import { getEmployeeById, updateEmployee } from '../services/employee.service';
 import { useAuth } from '../hooks/useAuth';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import { roles } from '../constants/roles';
@@ -40,7 +42,61 @@ const ProfilePage = () => {
         setFetchLoading(true);
         const userData = await getCurrentUser();
         
+        // Store basic user data
         setProfileData(userData);
+        
+        // Fetch additional data based on user role
+        let additionalData = {};
+        
+        if (userData.role === roles.customer && userData.id) {
+          try {
+            // Fetch customer-specific data
+            const customerData = await getCustomerById(userData.id);
+            // Check if we have successful response with customer data
+            const customerInfo = customerData.customer || customerData;
+            
+            if (customerInfo) {
+              additionalData = {
+                address: customerInfo.address || '',
+                social_security_number: customerInfo.social_security_number || '',
+                date_of_birth: customerInfo.date_of_birth || '',
+                is_active: customerInfo.is_active !== undefined ? customerInfo.is_active : false,
+                first_name: customerInfo.first_name || '',
+                last_name: customerInfo.last_name || '',
+                // Merge any other customer-specific fields
+                ...customerInfo
+              };
+              
+              // Update profile data with additional customer info
+              setProfileData(prev => ({ ...prev, ...additionalData }));
+            }
+          } catch (error) {
+            console.error('Error fetching customer data:', error);
+          }
+        } else if (userData.role === roles.employee && userData.id) {
+          try {
+            // Fetch employee-specific data
+            const employeeData = await getEmployeeById(userData.id);
+            // Check if we have successful response with employee data
+            const employeeInfo = employeeData.employee || employeeData;
+            
+            if (employeeInfo) {
+              additionalData = {
+                position: employeeInfo.position || '',
+                date_of_birth: employeeInfo.date_of_birth || '',
+                first_name: employeeInfo.first_name || '',
+                last_name: employeeInfo.last_name || '',
+                // Merge any other employee-specific fields
+                ...employeeInfo
+              };
+              
+              // Update profile data with additional employee info
+              setProfileData(prev => ({ ...prev, ...additionalData }));
+            }
+          } catch (error) {
+            console.error('Error fetching employee data:', error);
+          }
+        }
         
         // Split phone number into country code and number if it exists
         let countryCode = '+31';
@@ -56,18 +112,26 @@ const ProfilePage = () => {
           }
         }
         
+        // Combine all the data
+        const combinedData = {
+          ...userData,
+          ...additionalData
+        };
+        
+        // Set form data with both basic and role-specific data
         setFormData({
-          email: userData.email || '',
-          phone_number: userData.phone_number || '',
+          email: combinedData.email || '',
+          phone_number: combinedData.phone_number || '',
           country_code: countryCode,
           phone: phoneNumber,
-          position: userData.position || '',
-          address: userData.address || '',
-          first_name: userData.first_name || '',
-          last_name: userData.last_name || '',
-          date_of_birth: userData.date_of_birth || '',
-          social_security_number: userData.social_security_number || '',
-          is_active: userData.is_active !== undefined ? userData.is_active : false,
+          // Include role-specific fields
+          position: combinedData.position || '',
+          address: combinedData.address || '',
+          first_name: combinedData.first_name || userData.first_name || '',
+          last_name: combinedData.last_name || userData.last_name || '',
+          date_of_birth: combinedData.date_of_birth || '',
+          social_security_number: combinedData.social_security_number || '',
+          is_active: combinedData.is_active !== undefined ? combinedData.is_active : false,
         });
         
         setError(null);
@@ -81,7 +145,7 @@ const ProfilePage = () => {
     };
 
     fetchUserData();
-  }, []);
+  }, [roles.customer, roles.employee]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -205,24 +269,52 @@ const ProfilePage = () => {
         `${formData.country_code}${formData.phone.startsWith(' ') ? '' : ' '}${formData.phone}` : 
         '';
       
-      const updateData = {
+      // Prepare common data for all roles
+      const basicData = {
         email: formData.email,
         phone_number: fullPhoneNumber,
         first_name: formData.first_name,
         last_name: formData.last_name,
         date_of_birth: formData.date_of_birth,
-        // Include role-specific fields
-        ...(currentUser?.role === roles.employee && { position: formData.position }),
-        ...(currentUser?.role === roles.customer && { address: formData.address }),
-        ...(currentUser?.role === roles.customer && { social_security_number: formData.social_security_number }),
-        ...(currentUser?.role === roles.customer && { is_active: formData.is_active === "true" }),
       };
       
-      const result = await updateProfile(updateData);
-      toast.success('Profile updated successfully');
+      let result;
+      
+      // Use the appropriate service based on user role
+      if (currentUser?.role === roles.customer) {
+        const customerData = {
+          ...basicData,
+          address: formData.address,
+          social_security_number: formData.social_security_number,
+          // Note: is_active is typically managed by the system, not manually updated
+        };
+        
+        // Update customer profile using customer service
+        result = await updateCustomer(currentUser.id, customerData);
+        toast.success('Customer profile updated successfully');
+      } 
+      else if (currentUser?.role === roles.employee) {
+        const employeeData = {
+          ...basicData,
+          position: formData.position,
+        };
+        
+        // Update employee profile using employee service
+        result = await updateEmployee(currentUser.id, employeeData);
+        toast.success('Employee profile updated successfully');
+      } 
+      else {
+        // For admin or other roles, use the general update profile function
+        const updateData = {
+          ...basicData,
+        };
+        
+        result = await updateProfile(updateData);
+        toast.success('Profile updated successfully');
+      }
       
       // Update the profile data with new values
-      setProfileData(result);
+      setProfileData(prev => ({ ...prev, ...result }));
       
       // Exit edit mode
       setEditMode(false);
@@ -249,6 +341,19 @@ const ProfilePage = () => {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  // Make sure date is properly formatted in the input field
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return ''; // Invalid date
+      return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
   };
 
   // Render a field in view mode
@@ -287,6 +392,41 @@ const ProfilePage = () => {
     );
   };
 
+  // Add a function to handle toggling the edit mode
+  const toggleEditMode = () => {
+    if (!editMode) {
+      // Updating form data with the latest profile data before entering edit mode
+      // Split phone number into country code and number if it exists
+      let countryCode = '+31';
+      let phoneNumber = '';
+      
+      if (profileData.phone_number) {
+        const phoneMatch = profileData.phone_number.match(/^(\+\d+)\s*(.*)$/);
+        if (phoneMatch) {
+          countryCode = phoneMatch[1];
+          phoneNumber = phoneMatch[2];
+        } else {
+          phoneNumber = profileData.phone_number;
+        }
+      }
+      
+      setFormData({
+        email: profileData.email || '',
+        phone_number: profileData.phone_number || '',
+        country_code: countryCode,
+        phone: phoneNumber,
+        position: profileData.position || '',
+        address: profileData.address || '',
+        first_name: profileData.first_name || '',
+        last_name: profileData.last_name || '',
+        date_of_birth: profileData.date_of_birth || '',
+        social_security_number: profileData.social_security_number || '',
+        is_active: profileData.is_active !== undefined ? profileData.is_active : false,
+      });
+    }
+    setEditMode(!editMode);
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -297,7 +437,7 @@ const ProfilePage = () => {
           {!editMode && (
             <div>
               <button
-                onClick={() => setEditMode(true)}
+                onClick={toggleEditMode}
                 className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded transition-colors mr-2"
               >
                 Edit Profile
@@ -444,7 +584,7 @@ const ProfilePage = () => {
                 id="date_of_birth"
                 name="date_of_birth"
                 type="date"
-                value={formData.date_of_birth ? new Date(formData.date_of_birth).toISOString().split('T')[0] : ''}
+                value={formatDateForInput(formData.date_of_birth)}
                 onChange={handleChange}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               />
@@ -503,7 +643,7 @@ const ProfilePage = () => {
             <div className="flex items-center justify-end mt-6">
               <button
                 type="button"
-                onClick={() => setEditMode(false)}
+                onClick={toggleEditMode}
                 className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded mr-2 transition-colors"
               >
                 Cancel
@@ -531,7 +671,9 @@ const ProfilePage = () => {
           // View Mode
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
             <div className="md:col-span-2 mb-2 flex items-center">
-              <h2 className="text-xl font-semibold text-gray-800">{profileData.name}</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                {profileData.name}
+              </h2>
               {currentUser?.role === roles.employee && profileData.position && (
                 <div className="ml-3">
                   {renderPositionBadge(profileData.position)}

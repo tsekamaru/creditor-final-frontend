@@ -186,16 +186,17 @@ export const updateProfile = async (profileData) => {
  */
 export const changePassword = async (passwordData) => {
   try {
-    const response = await axios.post('/auth/change-password', passwordData)
+    // No need to include user ID, as it comes from the JWT token
+    const response = await axios.post('/api/auth/change-password', {
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmNewPassword: passwordData.confirmNewPassword
+    });
     
-    if (response.data.success) {
-      return response.data
-    } else {
-      throw new Error(response.data.message || 'Failed to change password')
-    }
+    return response.data;
   } catch (error) {
-    console.error('Error changing password:', error)
-    throw error
+    console.error('Error changing password:', error);
+    throw error;
   }
 }
 

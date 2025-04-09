@@ -226,26 +226,6 @@ export const AuthProvider = ({ children }) => {
     // Redirect will be handled by the component
   }
 
-  // Function to switch roles for development purposes only
-  const switchRole = (role) => {
-    if (import.meta.env.DEV) {
-      // Update user in state
-      setCurrentUser(prev => {
-        if (!prev) return null;
-        
-        const updatedUser = {
-          ...prev,
-          role
-        };
-        
-        // Update user in localStorage as well
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        return updatedUser;
-      });
-    }
-  }
-
   // Function to update the current user data
   const updateCurrentUser = (userData) => {
     setCurrentUser(prev => {
@@ -272,7 +252,6 @@ export const AuthProvider = ({ children }) => {
     verifyOTP,
     createPassword,
     logout: handleLogout,
-    switchRole,
     updateCurrentUser
   }
 

@@ -1,58 +1,78 @@
+import { useAuth } from '../hooks/useAuth';
+import { roles } from '../constants/roles';
+
 const Footer = () => {
+  const { currentUser } = useAuth();
+  const isCustomer = currentUser?.role === roles.customer;
+
   return (
     <footer className="bg-white">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 justify-items-start">
+          <div className="w-full">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase mb-4">
               About
             </h3>
-            <p className="mt-4 text-base text-gray-500">
-              Your company description goes here. Explain what your company does and what makes it special.
+            <p className="text-base text-gray-500">
+              Creditor has been established in 2003 and currently operates with twenty different branches. We provide loans ranging from $5 to $2000 as a micro-lending business, helping people in rural areas access financial services more easily. Our mission is to make financial services more accessible and digitalize the micro-lending business in Ulaanbaatar, Mongolia.
             </p>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+          <div className="w-full">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase mb-4">
               Quick Links
             </h3>
-            <ul className="mt-4 space-y-4">
+            <ul className="space-y-3">
               <li>
-                <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-                  Home
+                <a href="/dashboard" className="text-base text-gray-500 hover:text-gray-900">
+                  Dashboard
                 </a>
               </li>
               <li>
-                <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-                  About
+                <a href="/loans" className="text-base text-gray-500 hover:text-gray-900">
+                  Loans
                 </a>
               </li>
               <li>
-                <a href="#" className="text-base text-gray-500 hover:text-gray-900">
-                  Contact
+                <a href="/transactions" className="text-base text-gray-500 hover:text-gray-900">
+                  Transactions
                 </a>
               </li>
+              {!isCustomer && (
+                <>
+                  <li>
+                    <a href="/customers" className="text-base text-gray-500 hover:text-gray-900">
+                      Customers
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/employees" className="text-base text-gray-500 hover:text-gray-900">
+                      Employees
+                    </a>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">
+          <div className="w-full">
+            <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase mb-4">
               Contact
             </h3>
-            <ul className="mt-4 space-y-4">
+            <ul className="space-y-3">
               <li className="text-base text-gray-500">
-                Email: info@example.com
+                Email: tseka.nice@gmail.com
               </li>
               <li className="text-base text-gray-500">
-                Phone: (123) 456-7890
+                Phone: +31 615957803
               </li>
               <li className="text-base text-gray-500">
-                Address: 123 Street, City, Country
+                Address: Binnenhof 1A, 2513 AA The Hague, Netherlands
               </li>
             </ul>
           </div>
         </div>
-        <div className="mt-8 border-t border-gray-200 pt-8">
+        <div className="mt-12 border-t border-gray-200 pt-8">
           <p className="text-base text-gray-400 text-center">
-            &copy; {new Date().getFullYear()} Your Company. All rights reserved.
+            &copy; {new Date().getFullYear()} Creditor. All rights reserved.
           </p>
         </div>
       </div>
